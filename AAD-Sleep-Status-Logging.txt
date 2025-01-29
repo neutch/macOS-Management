@@ -3,6 +3,7 @@
 # Set log file location (Jamf logs to /var/log/jamf.log by default)
 LOGFILE="/var/tmp/jamf_aad_status.log"
 exec > >(tee -a "$LOGFILE") 2>&1
+osascript -e 'display dialog "This process will take approximately 10 minutes to complete. \n\nDO NOT INTERRUPT OR RE-RUN THIS POLICY.\n\nYour Mac may show signs of activity, but this is normal." buttons {"OK"} default button "OK"'
 
 echo "=== Azure AD & System Info Logging Script ==="
 echo "Start Time: $(date)"
