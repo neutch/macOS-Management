@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Set log file location (Jamf logs to /var/log/jamf.log by default)
+LOGFILE="/var/tmp/jamf_aad_status.log"
+exec > >(tee -a "$LOGFILE") 2>&1
+
+echo "=== Azure AD & System Info Logging Script ==="
+echo "Start Time: $(date)"
+
+# Get logged-in user
+loggedInUser=$(stat -f%Su /dev/console)
+userHome="/Users/$loggedInUser"
+
+# Get basic system info
+serialNumber=$(system_profiler SPHardwareDataType | awk '/Serial/ {print $4}')
+osVersion=$(sw_vers -productVersion)
+modelID=$(system_profiler SPHardwareDataType | awk '/Model Identifier/ {print $3}')
+networkSSID=$(networksetup -getairportnetwork en0 | awk -F': ' '{print $2}')
+
+echo "Logged-in User: $loggedInUser"
+echo "Serial Number: $serialNumber"
+echo "OS Version: $osVersion"
+echo "Model ID: $modelID"
+echo "Network SSID: $networkSSID"
+
+# Check Azure AD status
+AADKey=$(sudo -u "$loggedInUser" security find-generic-password -l "MS-ORGANIZATION-ACCESS" -g 2>/dev/null)
+
+if [[ $? -eq 0 ]]; then
+    echo "Azure AD Keychain Entry Found: Machine appears to be AAD-joined."
+else
+    echo "Azure AD Keychain Entry Not Found: Machine may not be AAD-joined."
+fi
+
+# Check Jamf binary connectivity
+jamfStatus=$(jamf checkJSSConnection)
+echo "Jamf Pro Connection Status: $jamfStatus"
+
+# Keep Self Service "Running" for 60 seconds while logging
+echo "Simulating long-running process for Self Service..."
+for i in {1..6}; do
+    echo "Sleeping... [$i/6] ($(date))"
+    sleep 10
+done
+
+# Send log data to Jamf (optional)
+jamf log -message "AAD Status Check - Serial: $serialNumber, AAD Joined: $([ $? -eq 0 ] && echo 'Yes' || echo 'No'), OS: $osVersion, Network: $networkSSID"
+
+echo "Script completed. Log saved to: $LOGFILE"
+exit 0
