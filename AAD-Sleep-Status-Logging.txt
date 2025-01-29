@@ -1,5 +1,12 @@
 #!/bin/bash
+loggedInUser=$(stat -f%Su /dev/console)
 
+if [[ "$loggedInUser" == "root" || -z "$loggedInUser" || $(pgrep -x "loginwindow") ]]; then
+    echo "⚠️ No interactive user session detected. Exiting script."
+    exit 1
+fi
+
+echo "✅ User '$loggedInUser' is interactively logged in. Proceeding..."
 # Set log file location (Jamf logs to /var/log/jamf.log by default)
 LOGFILE="/var/tmp/jamf_aad_status.log"
 exec > >(tee -a "$LOGFILE") 2>&1
